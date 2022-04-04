@@ -8,20 +8,29 @@ const useStore = create((set) => ({ target: null, setTarget: (target) => set({ t
 
 function Box(props) {
   // This reference gives us direct access to the THREE.Mesh object
+  const myMesh = useRef()
+
   const setTarget = useStore((state) => state.setTarget)
   const [hovered, setHovered] = useState(false)
-  const ref = useRef()
   useCursor(hovered)
 
-  const frameUpdate = (s) => {
+  const frameUpdate = (s, d) => {
+    const a = s.clock.getElapsedTime()
+
     // console.log(ref.current.position.x)
-    // ref.current.rotation.x += 0.01
-    // props.updateCallback()
+    myMesh.current.rotation.x += 0.01
+    // props.handler(myMesh.current.rotation.x)
     // console.log(s)
+
     // props.handler(ref.current.position)
+    if (a % 1 < 0.01) {
+      props.updateHandler(myMesh.current)
+    }
+
+    // call some function in parent when child frameUpdate is called
   }
   // Subscribe this component to the render-loop, rotate the mesh every frame
-  useFrame((state, delta) => frameUpdate(state))
+  useFrame((state, delta) => frameUpdate(state, delta))
   // instead of on frameUpdate, should only run
   // onBoxDrag, onBoxResize, etc.
   // I can implememnt my own onMove handler by implementing an
@@ -29,13 +38,11 @@ function Box(props) {
 
   return (
     <mesh
-      ref={ref}
+      ref={myMesh}
       {...props}
       onClick={(e) => {
-        console.log('clicked')
         setTarget(e.object)
       }}
-      onPointer
       onPointerMove={() => console.log('pointer move')}
       onPointerOver={() => setHovered(true)}
       onPointerOut={() => setHovered(false)}>
@@ -51,15 +58,15 @@ export default function App() {
 
   const [state, setState] = useState({ vecs: 'xyz' })
   const handler = useCallback(
-    (event) => {
-      console.log('You moved ', event)
+    (mesh) => {
+      setState({ vecs: mesh.position.x })
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state]
+    []
   )
-  const stateHandler = () => {
-    setState({ vecs: 'abc' })
-  }
+  // const stateHandler = () => {
+  //   setState({ vecs: 'abc' })
+  // }
 
   return (
     <>
@@ -67,8 +74,8 @@ export default function App() {
         {state.vecs}
       </div>
       <Canvas dpr={[1, 2]} onPointerMissed={() => setTarget(null)}>
-        <Box position={[2, 2, 0]} handler={handler} />
-        <Box handler={handler} />
+        <Box position={[2, 2, 0]} updateHandler={handler} />
+        <Box updateHandler={handler} />
         {target && <TransformControls object={target} mode={mode} />}
         <OrbitControls makeDefault />
       </Canvas>
